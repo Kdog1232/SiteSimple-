@@ -1,0 +1,21 @@
+-- SiteSimple schema reference only. These objects already exist in the shared
+-- STAR Generator project. Do not run this file as a migration and do not alter
+-- unrelated objects in that project.
+--
+-- public.sitesimple_inquiries
+--   id, created_at, name, business_name, email, phone, business_type,
+--   current_website, package_interest, owns_domain, description, goal, notes,
+--   status, source, submission_id (UNIQUE), owner_email_status, owner_email_id,
+--   customer_email_status, customer_email_id, email_last_error
+--
+-- public.sitesimple_inquiry_rate_limits
+--   Stores only the salted, SHA-256 visitor fingerprint used by SiteSimple.
+--
+-- public.sitesimple_check_inquiry_rate_limit(
+--   p_fingerprint text,
+--   p_max_requests integer,
+--   p_window_minutes integer
+-- )
+--
+-- The SiteSimple server service-role client is restricted by application code
+-- to these namespaced inquiry objects. This file intentionally contains no DDL.
