@@ -1,8 +1,10 @@
 import "server-only";
 
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-let adminClient: ReturnType<typeof createClient> | undefined;
+import type { Database } from "@/lib/supabase/database.types";
+
+let adminClient: SupabaseClient<Database> | undefined;
 
 export function getSupabaseAdmin() {
   const supabaseUrl = process.env.SUPABASE_URL;
@@ -12,7 +14,7 @@ export function getSupabaseAdmin() {
     throw new Error("Supabase server credentials are not configured.");
   }
 
-  adminClient ??= createClient(supabaseUrl, serviceRoleKey, {
+  adminClient ??= createClient<Database>(supabaseUrl, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 

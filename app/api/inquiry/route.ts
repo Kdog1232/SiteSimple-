@@ -6,6 +6,10 @@ import { Resend } from "resend";
 import { z } from "zod";
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import type {
+  SiteSimpleInquiryInsert,
+  SiteSimpleInquiryUpdate,
+} from "@/lib/supabase/database.types";
 
 const packages = [
   "Launch — $199",
@@ -64,7 +68,7 @@ function ownerEmail(inquiry: Inquiry) {
 
 async function updateEmailState(
   inquiryId: string,
-  changes: Record<string, string | null>,
+  changes: SiteSimpleInquiryUpdate,
 ) {
   const { error } = await getSupabaseAdmin()
     .from("sitesimple_inquiries")
@@ -148,7 +152,7 @@ export async function POST(request: Request) {
     if (existing) return NextResponse.json({ success: true, inquiryId: existing.id });
 
     const inquiry = parsed.data;
-    const record = {
+    const record: SiteSimpleInquiryInsert = {
       name: inquiry.name,
       business_name: inquiry.businessName,
       email: inquiry.email,
