@@ -1,0 +1,2 @@
+import { LegalPage } from "@/components/sections";
+export default function Terms() { return <LegalPage title="Terms of Service"><p>Project scope, deliverables, timelines, third-party costs, and payment terms will be confirmed in writing before work begins.</p><h2>Payments</h2><p>Website projects require a 50% deposit before work begins and the remaining balance before launch unless a written agreement states otherwise.</p><h2>Third-party services</h2><p>Domains, hosting, booking tools, and other third-party services may have separate fees and terms.</p></LegalPage>; }
