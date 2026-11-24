@@ -8,6 +8,7 @@ export type SiteSimpleInquiryRow = {
   business_type: string;
   current_website: string | null;
   package_interest: string;
+  website_care_interest: string | null;
   owns_domain: string;
   description: string;
   goal: string;
@@ -32,6 +33,7 @@ export type SiteSimpleInquiryInsert = {
   business_type: string;
   current_website?: string | null;
   package_interest: string;
+  website_care_interest?: string | null;
   owns_domain: string;
   description: string;
   goal: string;

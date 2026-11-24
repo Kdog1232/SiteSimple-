@@ -19,3 +19,5 @@
 --
 -- The SiteSimple server service-role client is restricted by application code
 -- to these namespaced inquiry objects. This file intentionally contains no DDL.
+
+-- The website_care_interest column is added by the migration in supabase/migrations.
