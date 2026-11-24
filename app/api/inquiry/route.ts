@@ -55,74 +55,78 @@ function escapeHtml(value: string) {
   })[character] ?? character);
 }
 
-function ownerEmail(inquiry: Inquiry) {
+function ownerEmail(inquiry: Inquiry, submittedAt: string) {
   const fields = [
-    ["Name", inquiry.name], ["Business", inquiry.businessName], ["Email", inquiry.email],
-    ["Phone", inquiry.phone || "Not provided"], ["Business type", inquiry.businessType],
-    ["Current website", inquiry.currentWebsite || "Not provided"], ["Package", inquiry.package],
-    ["Owns a domain", inquiry.domain], ["Business description", inquiry.description],
-    ["Website goal", inquiry.goal], ["Notes", inquiry.notes || "None"],
+    ["Customer name", inquiry.name], ["Business name", inquiry.businessName], ["Email address", inquiry.email],
+    ["Phone number", inquiry.phone || "Not provided"], ["Business type", inquiry.businessType],
+    ["Current website", inquiry.currentWebsite || "Not provided"], ["Selected package", inquiry.package],
+    ["Domain ownership", inquiry.domain], ["Business description", inquiry.description],
+    ["Website goals", inquiry.goal], ["Additional information", inquiry.notes || "None"],
+    ["Submission date (UTC)", submittedAt],
   ];
-  return fields.map(([label, value]) => `<p><strong>${label}:</strong> ${escapeHtml(value)}</p>`).join("");
+  return fields.map(([label, value]) => `<p><strong>${label}:</strong> ${escapeHtml(value).replace(/\r?\n/g, "<br>")}</p>`).join("");
 }
 
-async function updateEmailState(
-  inquiryId: string,
-  changes: SiteSimpleInquiryUpdate,
-) {
-  const { error } = await getSupabaseAdmin()
-    .from("sitesimple_inquiries")
-    .update(changes)
-    .eq("id", inquiryId);
-  if (error) console.error("Unable to update SiteSimple inquiry email status:", error.message);
+async function updateEmailState(inquiryId: string, changes: SiteSimpleInquiryUpdate) {
+  try {
+    const { error } = await getSupabaseAdmin()
+      .from("sitesimple_inquiries")
+      .update(changes)
+      .eq("id", inquiryId);
+    if (error) console.error("Inquiry email status update failed", { inquiryId, code: error.code });
+  } catch {
+    console.error("Inquiry email status update threw", { inquiryId });
+  }
 }
 
-async function sendEmails(inquiryId: string, inquiry: Inquiry) {
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.INQUIRY_FROM_EMAIL;
-  const owner = process.env.INQUIRY_NOTIFICATION_EMAIL;
-  const replyTo = process.env.INQUIRY_REPLY_TO_EMAIL;
-  if (!apiKey || !from || !owner || !replyTo) {
-    await updateEmailState(inquiryId, {
-      owner_email_status: "failed",
-      customer_email_status: "failed",
-      email_last_error: "Resend server configuration is incomplete.",
-    });
-    return;
-  }
-
-  const resend = new Resend(apiKey);
-  try {
-    const result = await resend.emails.send({
-      from, to: owner, replyTo: inquiry.email,
-      subject: `New Adams Digital Co. Inquiry — ${inquiry.businessName}`,
-      html: ownerEmail(inquiry),
-    });
-    if (result.error) throw new Error(result.error.message);
-    await updateEmailState(inquiryId, {
-      owner_email_status: "sent", owner_email_id: result.data?.id ?? null, email_last_error: null,
-    });
-  } catch (error) {
-    await updateEmailState(inquiryId, {
-      owner_email_status: "failed",
-      email_last_error: error instanceof Error ? error.message : "Owner email failed.",
-    });
-  }
+async function sendInquiryEmail(kind: "owner" | "customer", inquiryId: string, inquiry: Inquiry, submittedAt: string) {
+  const isOwner = kind === "owner";
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  const from = process.env.INQUIRY_FROM_EMAIL?.trim();
+  const owner = process.env.INQUIRY_NOTIFICATION_EMAIL?.trim();
+  const to = isOwner ? owner : inquiry.email;
+  const replyTo = isOwner ? inquiry.email : process.env.INQUIRY_REPLY_TO_EMAIL?.trim() || owner;
+  const statusField = isOwner ? "owner_email_status" : "customer_email_status";
+  const idField = isOwner ? "owner_email_id" : "customer_email_id";
+  let failure = "Resend request failed.";
 
   try {
-    const result = await resend.emails.send({
-      from, to: inquiry.email, replyTo,
-      subject: "We received your Adams Digital Co. project inquiry",
-      html: `<p>Hi ${escapeHtml(inquiry.name)},</p><p>Thanks! We've received your project inquiry for ${escapeHtml(inquiry.businessName)}. We'll review it and follow up about next steps.</p>`,
+    const missing = [
+      !apiKey && "RESEND_API_KEY",
+      !from && "INQUIRY_FROM_EMAIL",
+      !to && "INQUIRY_NOTIFICATION_EMAIL",
+    ].filter(Boolean);
+    if (!apiKey || !from || !to) {
+      failure = `Missing settings: ${missing.join(", ")}`;
+      throw new Error(failure);
+    }
+
+    const resend = new Resend(apiKey);
+    const { data, error } = await resend.emails.send({
+      from,
+      to,
+      replyTo,
+      subject: isOwner ? "New Customer Inquiry — Adams Digital Co." : "We received your Adams Digital Co. project inquiry",
+      html: isOwner
+        ? ownerEmail(inquiry, submittedAt)
+        : `<p>Hi ${escapeHtml(inquiry.name)},</p><p>Thanks! We've received your project inquiry for ${escapeHtml(inquiry.businessName)}. We'll review it and follow up about next steps.</p>`,
     });
-    if (result.error) throw new Error(result.error.message);
+    if (error || !data?.id) {
+      failure = error ? `Resend rejected the message (${error.name}). Check Resend logs.` : "Resend returned no email ID.";
+      throw new Error(failure);
+    }
+
+    console.info("Inquiry email accepted by Resend", { inquiryId, kind, emailId: data.id });
     await updateEmailState(inquiryId, {
-      customer_email_status: "sent", customer_email_id: result.data?.id ?? null,
+      [statusField]: "sent",
+      [idField]: data.id,
+      ...(isOwner ? { email_last_error: null } : {}),
     });
-  } catch (error) {
+  } catch {
+    console.error("Inquiry email failed", { inquiryId, kind, reason: failure });
     await updateEmailState(inquiryId, {
-      customer_email_status: "failed",
-      email_last_error: error instanceof Error ? error.message : "Customer email failed.",
+      [statusField]: "failed",
+      ...(isOwner ? { email_last_error: failure } : {}),
     });
   }
 }
@@ -131,27 +135,37 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const parsed = inquirySchema.safeParse(body);
   if (!parsed.success) {
+    console.warn("Inquiry validation failed", { fields: parsed.error.issues.map((issue) => issue.path.join(".")) });
     return NextResponse.json({ error: "Please check the form and try again." }, { status: 400 });
   }
 
+  const inquiry = parsed.data;
+  let step = "supabase_configuration";
   try {
+    console.info("Inquiry received", { submissionId: inquiry.submissionId });
     const supabase = getSupabaseAdmin();
+    step = "rate_limit";
     const fingerprint = visitorFingerprint(request);
     const { data: allowed, error: rateLimitError } = await supabase.rpc(
       "sitesimple_check_inquiry_rate_limit",
       { p_fingerprint: fingerprint, p_max_requests: 5, p_window_minutes: 60 },
     );
-    if (rateLimitError) throw new Error(`Rate-limit check failed: ${rateLimitError.message}`);
+    if (rateLimitError) throw new Error(rateLimitError.code || "Rate-limit check failed");
     if (allowed !== true) {
+      console.warn("Inquiry rate limit reached", { submissionId: inquiry.submissionId });
       return NextResponse.json({ error: "Too many inquiries. Please try again later." }, { status: 429 });
     }
 
+    step = "duplicate_lookup";
     const { data: existing, error: lookupError } = await supabase
       .from("sitesimple_inquiries").select("id").eq("submission_id", parsed.data.submissionId).maybeSingle();
-    if (lookupError) throw new Error(`Duplicate check failed: ${lookupError.message}`);
-    if (existing) return NextResponse.json({ success: true, inquiryId: existing.id });
+    if (lookupError) throw new Error(lookupError.code || "Duplicate check failed");
+    if (existing) {
+      console.info("Inquiry already stored", { inquiryId: existing.id });
+      return NextResponse.json({ success: true, inquiryId: existing.id });
+    }
 
-    const inquiry = parsed.data;
+    step = "inquiry_insert";
     const record: SiteSimpleInquiryInsert = {
       name: inquiry.name,
       business_name: inquiry.businessName,
@@ -171,19 +185,28 @@ export async function POST(request: Request) {
       customer_email_status: "pending",
     };
     const { data: inserted, error: insertError } = await supabase
-      .from("sitesimple_inquiries").insert(record).select("id").single();
+      .from("sitesimple_inquiries").insert(record).select("id, created_at").single();
 
     if (insertError?.code === "23505") {
       const { data: raced, error } = await supabase
         .from("sitesimple_inquiries").select("id").eq("submission_id", inquiry.submissionId).single();
-      if (!error && raced) return NextResponse.json({ success: true, inquiryId: raced.id });
+      if (!error && raced) {
+        console.info("Inquiry already stored by concurrent request", { inquiryId: raced.id });
+        return NextResponse.json({ success: true, inquiryId: raced.id });
+      }
     }
-    if (insertError || !inserted) throw new Error(`Inquiry insert failed: ${insertError?.message ?? "No row returned"}`);
+    if (insertError || !inserted) throw new Error(insertError?.code || "Insert returned no row");
 
-    await sendEmails(inserted.id, inquiry);
+    console.info("Inquiry saved to Supabase", { inquiryId: inserted.id, submissionId: inquiry.submissionId });
+    await sendInquiryEmail("owner", inserted.id, inquiry, inserted.created_at);
+    await sendInquiryEmail("customer", inserted.id, inquiry, inserted.created_at);
     return NextResponse.json({ success: true, inquiryId: inserted.id });
   } catch (error) {
-    console.error("SiteSimple inquiry could not be accepted:", error instanceof Error ? error.message : "Unknown error");
+    console.error("Inquiry could not be saved", {
+      submissionId: inquiry.submissionId,
+      step,
+      reason: error instanceof Error && /^[A-Z0-9]{5,8}$/.test(error.message) ? error.message : "Check Supabase configuration and connectivity.",
+    });
     return NextResponse.json({ error: "We couldn't save your inquiry. Please try again." }, { status: 503 });
   }
 }
