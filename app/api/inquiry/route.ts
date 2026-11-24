@@ -95,7 +95,7 @@ async function sendEmails(inquiryId: string, inquiry: Inquiry) {
   try {
     const result = await resend.emails.send({
       from, to: owner, replyTo: inquiry.email,
-      subject: `New SiteSimple Inquiry — ${inquiry.businessName}`,
+      subject: `New Adams Digital Co. Inquiry — ${inquiry.businessName}`,
       html: ownerEmail(inquiry),
     });
     if (result.error) throw new Error(result.error.message);
@@ -112,7 +112,7 @@ async function sendEmails(inquiryId: string, inquiry: Inquiry) {
   try {
     const result = await resend.emails.send({
       from, to: inquiry.email, replyTo,
-      subject: "We received your SiteSimple project inquiry",
+      subject: "We received your Adams Digital Co. project inquiry",
       html: `<p>Hi ${escapeHtml(inquiry.name)},</p><p>Thanks! We've received your project inquiry for ${escapeHtml(inquiry.businessName)}. We'll review it and follow up about next steps.</p>`,
     });
     if (result.error) throw new Error(result.error.message);
