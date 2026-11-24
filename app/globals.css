@@ -26,79 +26,83 @@ footer :focus-visible {
   outline-color: #71cbff;
 }
 
-.founder { padding-bottom: 0; scroll-margin-top: 85px; }
-.founder-heading { max-width: 760px; margin-bottom: 38px; }
-.founder-heading h2 { margin-bottom: 0; }
+.founder { padding-bottom: 0; }
 .founder-grid {
   display: grid;
-  grid-template-areas: "portrait bio" "quote bio" ". action";
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.8fr);
-  grid-template-rows: auto 1fr auto;
-  column-gap: clamp(30px, 6vw, 86px);
-  row-gap: 24px;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.45fr);
+  gap: clamp(30px, 6vw, 86px);
   align-items: start;
 }
 .founder-portrait {
-  grid-area: portrait;
-  position: relative;
+  max-width: 420px;
+  margin: 0;
+}
+.founder-portrait img {
+  display: block;
   width: 100%;
-  aspect-ratio: 4 / 5;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  border-radius: 15px;
-  background: radial-gradient(ellipse at top right, #124777, var(--navy) 68%);
+  height: auto;
+  border-radius: 12px;
+  box-shadow: 0 14px 32px #07183126;
 }
-.founder-portrait img { object-fit: cover; object-position: center 35%; }
-.founder-monogram {
+.founder-portrait figcaption {
   display: grid;
-  place-items: center;
-  width: 53%;
-  aspect-ratio: 1;
-  border: 1px solid #71cbff66;
-  border-radius: 18%;
-  background: #71cbff12;
-  color: #71cbff;
-  font: 800 clamp(3rem, 8vw, 6rem) "Manrope", sans-serif;
-  letter-spacing: -.075em;
-  padding-right: .075em;
+  gap: 4px;
+  margin-top: 23px;
+  padding-left: 14px;
+  border-left: 3px solid var(--blue);
 }
-.founder-bio { grid-area: bio; }
-.founder-bio h3 { font-size: clamp(1.55rem, 3vw, 2rem); margin-bottom: 4px; }
-.founder-bio p { color: var(--muted); }
-.founder-bio .founder-title { color: var(--blue); font-weight: 700; margin: 0 0 22px; }
+.founder-portrait strong {
+  font: 800 clamp(1.4rem, 2.2vw, 1.85rem)/1.2 "Manrope", sans-serif;
+}
+.founder-portrait figcaption span {
+  color: var(--muted);
+  font-size: .875rem;
+  font-weight: 700;
+}
+.founder-bio h2 { font-size: clamp(2rem, 4vw, 3.4rem); }
+.founder-bio > p:not(.kicker) { color: var(--muted); }
 .founder-highlights {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px 16px;
   list-style: none;
   padding: 0;
-  margin: 24px 0 0;
+  margin: 24px 0;
 }
-.founder-highlights li { display: flex; align-items: center; gap: 10px; font-size: .88rem; font-weight: 700; }
-.founder-highlights .icon-box { width: 36px; height: 36px; flex: none; }
+.founder-highlights li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: .88rem;
+  font-weight: 700;
+}
+.founder-highlights .icon-box {
+  width: 36px;
+  height: 36px;
+  flex: none;
+}
 .founder-quote {
-  grid-area: quote;
-  margin: 0;
-  padding: 22px 24px;
+  margin: 0 0 24px;
+  padding: 20px 24px;
   border-left: 3px solid var(--blue);
-  border-radius: 0 10px 10px 0;
+  border-radius: 0 8px 8px 0;
   background: var(--surface);
 }
-.founder-quote blockquote { margin: 0 0 9px; font: 700 1.06rem/1.5 "Manrope", sans-serif; }
+.founder-quote blockquote {
+  margin: 0 0 8px;
+  font: 700 1.06rem/1.5 "Manrope", sans-serif;
+}
 .founder-quote figcaption { color: var(--muted); font-size: .84rem; }
-.founder-action { grid-area: action; }
-@media (max-width: 800px) {
+@media (min-width: 651px) and (max-width: 900px), (max-width: 430px) {
   .founder-highlights { grid-template-columns: 1fr; }
 }
 @media (max-width: 650px) {
-  .founder-heading { margin-bottom: 25px; }
-  .founder-grid { grid-template-columns: 1fr; grid-template-rows: auto; grid-template-areas: "portrait" "bio" "quote" "action"; }
-  .founder-portrait { max-width: 390px; }
+  .founder-grid { grid-template-columns: minmax(0, 1fr); }
+  .founder-portrait { max-width: 400px; }
 }
 @media (prefers-reduced-motion: no-preference) {
   @supports (animation-timeline: view()) {
-    .founder-portrait {
+    .founder-portrait img {
       animation: founder-reveal linear both;
       animation-timeline: view();
       animation-range: entry 0% entry 35%;
