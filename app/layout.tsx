@@ -7,11 +7,11 @@ const description = "Done-for-you professional websites for small businesses. Si
 
 export const metadata: Metadata = {
   metadataBase,
-  title: "SiteSimple | Affordable Small Business Websites",
+  title: "Adams Digital Co. | Affordable Small Business Websites",
   description,
   alternates: { canonical: "/" },
-  openGraph: { title: "SiteSimple | Affordable Small Business Websites", description, type: "website", siteName: "SiteSimple", url: "/" },
-  twitter: { card: "summary_large_image", title: "SiteSimple | Affordable Small Business Websites", description },
+  openGraph: { title: "Adams Digital Co. | Affordable Small Business Websites", description, type: "website", siteName: "Adams Digital Co.", url: "/" },
+  twitter: { card: "summary_large_image", title: "Adams Digital Co. | Affordable Small Business Websites", description },
   robots: { index: true, follow: true },
 };
 
