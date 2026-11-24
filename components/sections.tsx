@@ -6,7 +6,7 @@ import { FormEvent, ReactNode, useState } from "react";
 import { ArrowRight, BriefcaseBusiness, Camera, Car, Check, ChevronDown, CircleCheck, Flower2, Hammer, HeartHandshake, House, Menu, Paintbrush, Scissors, Sparkles, Store, Utensils, Wrench, X } from "lucide-react";
 import { packages, projects } from "@/lib/data";
 
-const nav = [["Home", "#home"], ["Services", "#services"], ["Pricing", "#pricing"], ["Portfolio", "#portfolio"], ["How It Works", "#process"], ["FAQ", "#faq"], ["Contact", "#contact"]];
+const nav = [["Home", "#home"], ["Services", "#services"], ["Pricing", "#pricing"], ["Portfolio", "#portfolio"], ["How It Works", "#process"], ["FAQ", "#faq"], ["About", "/#about"], ["Contact", "#contact"]];
 const Button = ({ href, children, secondary = false }: { href: string; children: ReactNode; secondary?: boolean }) => <a href={href} className={`button ${secondary ? "secondary" : "primary"}`}>{children}<ArrowRight size={17} aria-hidden /></a>;
 const Kicker = ({ children }: { children: ReactNode }) => <p className="kicker">{children}</p>;
 
