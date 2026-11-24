@@ -5,17 +5,17 @@ import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { z } from "zod";
 
+import { careOptions, projectOptions } from "@/lib/inquiry-options";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type {
   SiteSimpleInquiryInsert,
   SiteSimpleInquiryUpdate,
 } from "@/lib/supabase/database.types";
 
-const packages = [
+const legacyPackages = [
   "Launch — $199",
   "Business — $499",
   "Business Pro — $799",
-  "DIY Website Rescue — Starting at $249",
   "Custom Project",
   "Not Sure",
 ] as const;
@@ -30,7 +30,8 @@ const inquirySchema = z.object({
   phone: optionalText(50),
   businessType: requiredText(120),
   currentWebsite: z.union([z.literal(""), z.string().trim().url().max(2048)]),
-  package: z.enum(packages),
+  package: z.enum([...projectOptions, ...legacyPackages]),
+  websiteCareInterest: z.union([z.enum(careOptions), z.literal("")]).optional(),
   domain: z.enum(domainStatuses),
   description: requiredText(4000),
   goal: requiredText(4000),
@@ -55,13 +56,15 @@ function escapeHtml(value: string) {
   })[character] ?? character);
 }
 
-function ownerEmail(inquiry: Inquiry) {
+function ownerEmail(inquiry: Inquiry, submittedAt: string) {
   const fields = [
-    ["Name", inquiry.name], ["Business", inquiry.businessName], ["Email", inquiry.email],
-    ["Phone", inquiry.phone || "Not provided"], ["Business type", inquiry.businessType],
-    ["Current website", inquiry.currentWebsite || "Not provided"], ["Package", inquiry.package],
-    ["Owns a domain", inquiry.domain], ["Business description", inquiry.description],
-    ["Website goal", inquiry.goal], ["Notes", inquiry.notes || "None"],
+    ["Customer name", inquiry.name], ["Business name", inquiry.businessName], ["Email address", inquiry.email],
+    ["Phone number", inquiry.phone || "Not provided"], ["Business type", inquiry.businessType],
+    ["Current website", inquiry.currentWebsite || "Not provided"], ["Project package", inquiry.package],
+    ["Website Care plan", inquiry.websiteCareInterest || "Not specified"],
+    ["Domain ownership", inquiry.domain], ["Business description", inquiry.description],
+    ["Website or application goals", inquiry.goal], ["Additional information", inquiry.notes || "None"],
+    ["Submission date (UTC)", new Date(submittedAt).toUTCString()],
   ];
   return fields.map(([label, value]) => `<p><strong>${label}:</strong> ${escapeHtml(value)}</p>`).join("");
 }
@@ -70,19 +73,23 @@ async function updateEmailState(
   inquiryId: string,
   changes: SiteSimpleInquiryUpdate,
 ) {
-  const { error } = await getSupabaseAdmin()
-    .from("sitesimple_inquiries")
-    .update(changes)
-    .eq("id", inquiryId);
-  if (error) console.error("Unable to update SiteSimple inquiry email status:", error.message);
+  try {
+    const { error } = await getSupabaseAdmin()
+      .from("sitesimple_inquiries")
+      .update(changes)
+      .eq("id", inquiryId);
+    if (error) console.error("Inquiry email status update failed", { inquiryId, code: error.code });
+  } catch {
+    console.error("Inquiry email status update failed", { inquiryId });
+  }
 }
 
-async function sendEmails(inquiryId: string, inquiry: Inquiry) {
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.INQUIRY_FROM_EMAIL;
-  const owner = process.env.INQUIRY_NOTIFICATION_EMAIL;
-  const replyTo = process.env.INQUIRY_REPLY_TO_EMAIL;
-  if (!apiKey || !from || !owner || !replyTo) {
+async function sendEmails(inquiryId: string, inquiry: Inquiry, submittedAt: string) {
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  const from = process.env.INQUIRY_FROM_EMAIL?.trim();
+  const owner = process.env.INQUIRY_NOTIFICATION_EMAIL?.trim();
+  const replyTo = process.env.INQUIRY_REPLY_TO_EMAIL?.trim();
+  if (!apiKey || !from) {
     await updateEmailState(inquiryId, {
       owner_email_status: "failed",
       customer_email_status: "failed",
@@ -92,37 +99,44 @@ async function sendEmails(inquiryId: string, inquiry: Inquiry) {
   }
 
   const resend = new Resend(apiKey);
+  let ownerError: string | null = null;
   try {
+    if (!owner) throw new Error("Owner notification address is not configured.");
     const result = await resend.emails.send({
       from, to: owner, replyTo: inquiry.email,
       subject: `New Adams Digital Co. Inquiry — ${inquiry.businessName}`,
-      html: ownerEmail(inquiry),
+      html: ownerEmail(inquiry, submittedAt),
     });
     if (result.error) throw new Error(result.error.message);
+    if (!result.data?.id) throw new Error("Resend returned no email ID.");
     await updateEmailState(inquiryId, {
-      owner_email_status: "sent", owner_email_id: result.data?.id ?? null, email_last_error: null,
+      owner_email_status: "sent", owner_email_id: result.data.id, email_last_error: null,
     });
   } catch (error) {
+    ownerError = error instanceof Error ? error.message : "Owner email failed.";
     await updateEmailState(inquiryId, {
       owner_email_status: "failed",
-      email_last_error: error instanceof Error ? error.message : "Owner email failed.",
+      email_last_error: ownerError,
     });
   }
 
   try {
+    if (!replyTo) throw new Error("Customer confirmation reply-to address is not configured.");
     const result = await resend.emails.send({
       from, to: inquiry.email, replyTo,
       subject: "We received your Adams Digital Co. project inquiry",
       html: `<p>Hi ${escapeHtml(inquiry.name)},</p><p>Thanks! We've received your project inquiry for ${escapeHtml(inquiry.businessName)}. We'll review it and follow up about next steps.</p>`,
     });
     if (result.error) throw new Error(result.error.message);
+    if (!result.data?.id) throw new Error("Resend returned no email ID.");
     await updateEmailState(inquiryId, {
-      customer_email_status: "sent", customer_email_id: result.data?.id ?? null,
+      customer_email_status: "sent", customer_email_id: result.data.id,
     });
   } catch (error) {
+    const customerError = error instanceof Error ? error.message : "Customer email failed.";
     await updateEmailState(inquiryId, {
       customer_email_status: "failed",
-      email_last_error: error instanceof Error ? error.message : "Customer email failed.",
+      email_last_error: ownerError ? `Owner: ${ownerError}\nCustomer: ${customerError}` : customerError,
     });
   }
 }
@@ -160,6 +174,7 @@ export async function POST(request: Request) {
       business_type: inquiry.businessType,
       current_website: inquiry.currentWebsite || null,
       package_interest: inquiry.package,
+      website_care_interest: inquiry.websiteCareInterest || null,
       owns_domain: inquiry.domain,
       description: inquiry.description,
       goal: inquiry.goal,
@@ -171,7 +186,7 @@ export async function POST(request: Request) {
       customer_email_status: "pending",
     };
     const { data: inserted, error: insertError } = await supabase
-      .from("sitesimple_inquiries").insert(record).select("id").single();
+      .from("sitesimple_inquiries").insert(record).select("id, created_at").single();
 
     if (insertError?.code === "23505") {
       const { data: raced, error } = await supabase
@@ -180,7 +195,11 @@ export async function POST(request: Request) {
     }
     if (insertError || !inserted) throw new Error(`Inquiry insert failed: ${insertError?.message ?? "No row returned"}`);
 
-    await sendEmails(inserted.id, inquiry);
+    try {
+      await sendEmails(inserted.id, inquiry, inserted.created_at);
+    } catch (error) {
+      console.error("Unable to complete inquiry email handling:", error instanceof Error ? error.message : "Unknown error");
+    }
     return NextResponse.json({ success: true, inquiryId: inserted.id });
   } catch (error) {
     console.error("SiteSimple inquiry could not be accepted:", error instanceof Error ? error.message : "Unknown error");
