@@ -5,10 +5,11 @@ import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { z } from "zod";
 
+import { brand } from "@/lib/brand";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type {
-  SiteSimpleInquiryInsert,
-  SiteSimpleInquiryUpdate,
+  InquiryInsert,
+  InquiryUpdate,
 } from "@/lib/supabase/database.types";
 
 const packages = [
@@ -68,13 +69,13 @@ function ownerEmail(inquiry: Inquiry) {
 
 async function updateEmailState(
   inquiryId: string,
-  changes: SiteSimpleInquiryUpdate,
+  changes: InquiryUpdate,
 ) {
   const { error } = await getSupabaseAdmin()
     .from("sitesimple_inquiries")
     .update(changes)
     .eq("id", inquiryId);
-  if (error) console.error("Unable to update SiteSimple inquiry email status:", error.message);
+  if (error) console.error("Unable to update Adams Digital Co. inquiry email status:", error.message);
 }
 
 async function sendEmails(inquiryId: string, inquiry: Inquiry) {
@@ -92,10 +93,11 @@ async function sendEmails(inquiryId: string, inquiry: Inquiry) {
   }
 
   const resend = new Resend(apiKey);
+  const brandedFrom = `${brand.name} <${from.match(/<([^<>]+)>\s*$/)?.[1] ?? from}>`;
   try {
     const result = await resend.emails.send({
-      from, to: owner, replyTo: inquiry.email,
-      subject: `New SiteSimple Inquiry — ${inquiry.businessName}`,
+      from: brandedFrom, to: owner, replyTo: inquiry.email,
+      subject: `New ${brand.name} inquiry — ${inquiry.businessName}`,
       html: ownerEmail(inquiry),
     });
     if (result.error) throw new Error(result.error.message);
@@ -111,9 +113,9 @@ async function sendEmails(inquiryId: string, inquiry: Inquiry) {
 
   try {
     const result = await resend.emails.send({
-      from, to: inquiry.email, replyTo,
-      subject: "We received your SiteSimple project inquiry",
-      html: `<p>Hi ${escapeHtml(inquiry.name)},</p><p>Thanks! We've received your project inquiry for ${escapeHtml(inquiry.businessName)}. We'll review it and follow up about next steps.</p>`,
+      from: brandedFrom, to: inquiry.email, replyTo,
+      subject: `We received your ${brand.name} project inquiry`,
+      html: `<p>Hi ${escapeHtml(inquiry.name)},</p><p>Thanks! We've received your project inquiry for ${escapeHtml(inquiry.businessName)}. We'll review it and follow up about next steps.</p><p>${brand.name}<br />${brand.tagline}</p>`,
     });
     if (result.error) throw new Error(result.error.message);
     await updateEmailState(inquiryId, {
@@ -152,7 +154,7 @@ export async function POST(request: Request) {
     if (existing) return NextResponse.json({ success: true, inquiryId: existing.id });
 
     const inquiry = parsed.data;
-    const record: SiteSimpleInquiryInsert = {
+    const record: InquiryInsert = {
       name: inquiry.name,
       business_name: inquiry.businessName,
       email: inquiry.email,
@@ -183,7 +185,7 @@ export async function POST(request: Request) {
     await sendEmails(inserted.id, inquiry);
     return NextResponse.json({ success: true, inquiryId: inserted.id });
   } catch (error) {
-    console.error("SiteSimple inquiry could not be accepted:", error instanceof Error ? error.message : "Unknown error");
+    console.error("Adams Digital Co. inquiry could not be accepted:", error instanceof Error ? error.message : "Unknown error");
     return NextResponse.json({ error: "We couldn't save your inquiry. Please try again." }, { status: 503 });
   }
 }

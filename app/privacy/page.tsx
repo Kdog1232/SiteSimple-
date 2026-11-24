@@ -1,2 +1,44 @@
+import type { Metadata } from "next";
+import { brand, socialPreview } from "@/lib/brand";
+
+const title = "Privacy Policy";
+const description =
+  "How Adams Digital Co. handles information from project inquiries and website analytics.";
+
+export const metadata: Metadata = {
+  title,
+  description,
+  alternates: { canonical: "/privacy" },
+  openGraph: {
+    type: "website",
+    title: `${title} | ${brand.name}`,
+    description,
+    siteName: brand.name,
+    images: [socialPreview],
+    url: "/privacy",
+  },
+};
+
 import { LegalPage } from "@/components/sections";
-export default function Privacy() { return <LegalPage title="Privacy Policy"><p>SiteSimple only collects the information you submit through our project inquiry form so we can respond to your request. We do not sell your personal information.</p><h2>Information we collect</h2><p>Inquiry details may include your name, contact information, business details, and project needs. Website analytics may collect aggregated usage information.</p><h2>Contact and updates</h2><p>Contact us with privacy questions. This policy may be updated as our services change.</p></LegalPage>; }
+export default function Privacy() {
+  return (
+    <LegalPage title={title}>
+      <p>
+        Adams Digital Co. only collects the information you submit through our
+        project inquiry form so we can respond to your request. We do not sell
+        your personal information.
+      </p>
+      <h2>Information we collect</h2>
+      <p>
+        Inquiry details may include your name, contact information, business
+        details, and project needs. Website analytics may collect aggregated
+        usage information.
+      </p>
+      <h2>Contact and updates</h2>
+      <p>
+        Contact us with privacy questions. This policy may be updated as our
+        services change.
+      </p>
+    </LegalPage>
+  );
+}

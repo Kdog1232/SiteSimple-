@@ -1,24 +1,30 @@
 import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/react";
+import { brand, socialPreview } from "@/lib/brand";
 import { metadataBase } from "@/lib/site-url";
 import "./globals.css";
 
-const description = "Done-for-you professional websites for small businesses. Simple pricing, modern design, and no tech headaches. Websites starting at $199.";
-
 export const metadata: Metadata = {
   metadataBase,
-  title: "SiteSimple | Affordable Small Business Websites",
-  description,
-  alternates: { canonical: "/" },
-  openGraph: { title: "SiteSimple | Affordable Small Business Websites", description, type: "website", siteName: "SiteSimple", url: "/" },
-  twitter: { card: "summary_large_image", title: "SiteSimple | Affordable Small Business Websites", description },
+  title: {
+    default: `${brand.name} | ${brand.tagline}`,
+    template: `%s | ${brand.name}`,
+  },
+  description: brand.description,
+  openGraph: { type: "website", siteName: brand.name },
+  twitter: { card: "summary_large_image", images: [socialPreview] },
   robots: { index: true, follow: true },
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default function RootLayout({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}<Analytics /></body>
+      <body>
+        {children}
+        <Analytics />
+      </body>
     </html>
   );
 }

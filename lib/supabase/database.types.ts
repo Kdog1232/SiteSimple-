@@ -1,4 +1,4 @@
-export type SiteSimpleInquiryRow = {
+export type InquiryRow = {
   id: string;
   created_at: string;
   name: string;
@@ -22,7 +22,7 @@ export type SiteSimpleInquiryRow = {
   email_last_error: string | null;
 };
 
-export type SiteSimpleInquiryInsert = {
+export type InquiryInsert = {
   id?: string;
   created_at?: string;
   name: string;
@@ -46,15 +46,15 @@ export type SiteSimpleInquiryInsert = {
   email_last_error?: string | null;
 };
 
-export type SiteSimpleInquiryUpdate = Partial<SiteSimpleInquiryInsert>;
+export type InquiryUpdate = Partial<InquiryInsert>;
 
 export type Database = {
   public: {
     Tables: {
       sitesimple_inquiries: {
-        Row: SiteSimpleInquiryRow;
-        Insert: SiteSimpleInquiryInsert;
-        Update: SiteSimpleInquiryUpdate;
+        Row: InquiryRow;
+        Insert: InquiryInsert;
+        Update: InquiryUpdate;
         Relationships: [];
       };
     };

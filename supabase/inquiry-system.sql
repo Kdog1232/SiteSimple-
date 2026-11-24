@@ -1,4 +1,4 @@
--- SiteSimple schema reference only. These objects already exist in the shared
+-- Adams Digital Co. schema reference only. These objects already exist in the shared
 -- STAR Generator project. Do not run this file as a migration and do not alter
 -- unrelated objects in that project.
 --
@@ -9,7 +9,7 @@
 --   customer_email_status, customer_email_id, email_last_error
 --
 -- public.sitesimple_inquiry_rate_limits
---   Stores only the salted, SHA-256 visitor fingerprint used by SiteSimple.
+--   Stores only the salted, SHA-256 visitor fingerprint used by Adams Digital Co..
 --
 -- public.sitesimple_check_inquiry_rate_limit(
 --   p_fingerprint text,
@@ -17,5 +17,5 @@
 --   p_window_minutes integer
 -- )
 --
--- The SiteSimple server service-role client is restricted by application code
+-- The Adams Digital Co. server service-role client is restricted by application code
 -- to these namespaced inquiry objects. This file intentionally contains no DDL.
